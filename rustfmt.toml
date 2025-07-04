@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Date: 2025-07-04
+# Author: Alexander Kuzin <alkuzindev@gmail.com>
+
+# Control the maximum width of a line.
+max_width = 80
+
+# Control the number of spaces for indentation.
+tab_spaces = 4
+
+# Control the indentation style.
+# Use spaces for indentation instead of hard tabs.
+hard_tabs = false
