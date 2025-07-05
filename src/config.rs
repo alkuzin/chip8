@@ -3,9 +3,6 @@
 
 //! Emulator configuration data.
 
-// Allow unused code for this module.
-#![allow(dead_code)]
-
 /// Software configuration data struct.
 pub struct Config;
 

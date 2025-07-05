@@ -3,6 +3,9 @@
 
 //! Emulator entry point.
 
+// Allow unused code.
+#![allow(dead_code)]
+
 mod config;
 mod emulator;
 
