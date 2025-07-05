@@ -4,7 +4,7 @@
 # Project package info section.
 [package]
 name        = "chip8"
-version     = "0.0.2"
+version     = "0.0.3"
 description = "CHIP-8 interpreted programming language emulator"
 authors     = ["Alexander Kuzin <alkuzindev@gmail.com>"]
 repository  = "https://github.com/alkuzin/chip8"
