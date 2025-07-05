@@ -148,6 +148,20 @@ impl OpCode {
             _ => self.unknown(),
         }
     }
+
+    /// Get Ex opcode class mnemonic.
+    ///
+    /// # Returns
+    /// - Opcode assembly mnemonic string representation.
+    fn decode_ex(&self) -> String {
+        let reg_x = self.reg_x;
+
+        match self.byte {
+            0x9E => format!("SKP V{reg_x}"),
+            0xA1 => format!("SKNP V{reg_x}"),
+            _ => self.unknown(),
+        }
+    }
 }
 
 impl Decodable for OpCode {
@@ -171,7 +185,7 @@ impl Decodable for OpCode {
             0xB => self.decode_nnn(),
             0xC => self.decode_xkk(),
             0xD => self.decode_xy(),
-            0xE => unimplemented!(),
+            0xE => self.decode_ex(),
             0xF => unimplemented!(),
             _ => self.unknown(),
         }
@@ -348,5 +362,17 @@ pub mod tests {
 
         let disasm_str = OpCode::new(0x9121).decode();
         assert_eq!("UNKNOWN: 9121", disasm_str);
+    }
+
+    #[test]
+    fn test_decode_ex() {
+        let disasm_str = OpCode::new(0xE19E).decode();
+        assert_eq!("SKP V1", disasm_str);
+
+        let disasm_str = OpCode::new(0xE1A1).decode();
+        assert_eq!("SKNP V1", disasm_str);
+
+        let disasm_str = OpCode::new(0xE1AA).decode();
+        assert_eq!("UNKNOWN: E1AA", disasm_str);
     }
 }
