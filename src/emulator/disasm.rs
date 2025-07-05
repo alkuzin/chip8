@@ -67,7 +67,7 @@ impl OpCode {
         match self.raw {
             0x00E0 => "CLS".to_string(),
             0x00EE => "RET".to_string(),
-            _ => format!("SYS {:03X}", addr),
+            _ => format!("SYS {addr:03X}"),
         }
     }
 
@@ -79,10 +79,10 @@ impl OpCode {
         let addr = self.addr();
 
         match class {
-            0x1 => format!("JP {:03X}", addr),
-            0x2 => format!("CALL {:03X}", addr),
-            0xA => format!("LD I, {:03X}", addr),
-            0xB => format!("JP V0, {:03X}", addr),
+            0x1 => format!("JP {addr:03X}"),
+            0x2 => format!("CALL {addr:03X}"),
+            0xA => format!("LD I, {addr:03X}"),
+            0xB => format!("JP V0, {addr:03X}"),
             _ => self.unknown(),
         }
     }
@@ -138,7 +138,6 @@ pub mod tests {
     #[test]
     fn test_unknown_opcode() {
         let disasm_str = OpCode::new(0xFFFF).decode();
-
         assert_eq!("UNKNOWN: FFFF", disasm_str)
     }
 
