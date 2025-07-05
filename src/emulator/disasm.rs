@@ -48,15 +48,42 @@ impl OpCode {
         self.raw & 0x0FFF
     }
 
+    /// Handle unknown opcode.
+    ///
+    /// # Returns
+    /// - Unknown opcode assembly mnemonic.
+    #[inline(always)]
+    pub fn unknown(&self) -> String {
+        format!("UNKNOWN: {:04X}", self.raw)
+    }
+
     /// Get 0xxx opcode class mnemonic.
     ///
     /// # Returns
     /// - Opcode assembly mnemonic string representation.
     fn decode_0xxx(&self) -> String {
+        let addr = self.addr();
+
         match self.raw {
-            0x00E0 => String::from("CLS"),
-            0x00EE => String::from("RET"),
-            _      => format!("SYS {:03X}", self.addr()),
+            0x00E0 => "CLS".to_string(),
+            0x00EE => "RET".to_string(),
+            _ => format!("SYS {:03X}", addr),
+        }
+    }
+
+    /// Get xnnn opcode class mnemonic.
+    ///
+    /// # Returns
+    /// - Opcode assembly mnemonic string representation.
+    fn decode_xnnn(&self, class: u8) -> String {
+        let addr = self.addr();
+
+        match class {
+            0x1 => format!("JP {:03X}", addr),
+            0x2 => format!("CALL {:03X}", addr),
+            0xA => format!("LD I, {:03X}", addr),
+            0xB => format!("JP V0, {:03X}", addr),
+            _ => self.unknown(),
         }
     }
 }
@@ -71,7 +98,11 @@ impl Decodable for OpCode {
 
         match opcode_class {
             0x0000 => self.decode_0xxx(),
-            _      => format!("UNKNOWN: {:04X}", self.raw)
+            0x1000 => self.decode_xnnn(0x1),
+            0x2000 => self.decode_xnnn(0x2),
+            0xA000 => self.decode_xnnn(0xA),
+            0xB000 => self.decode_xnnn(0xB),
+            _ => self.unknown(),
         }
     }
 }
@@ -121,5 +152,20 @@ pub mod tests {
 
         let disasm_str = OpCode::new(0x0123).decode();
         assert_eq!("SYS 123", disasm_str);
+    }
+
+    #[test]
+    fn test_decode_xnnn() {
+        let disasm_str = OpCode::new(0x1123).decode();
+        assert_eq!("JP 123", disasm_str);
+
+        let disasm_str = OpCode::new(0x2123).decode();
+        assert_eq!("CALL 123", disasm_str);
+
+        let disasm_str = OpCode::new(0xA123).decode();
+        assert_eq!("LD I, 123", disasm_str);
+
+        let disasm_str = OpCode::new(0xB123).decode();
+        assert_eq!("JP V0, 123", disasm_str);
     }
 }
