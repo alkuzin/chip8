@@ -16,10 +16,14 @@ pub trait Decodable {
 pub struct OpCode {
     /// Opcode raw bytes.
     pub raw: u16,
-    /// Memory address from opcode.
-    pub addr: u16,
     /// Opcode class.
     pub class: u8,
+    /// Memory address from opcode.
+    pub addr: u16,
+    /// First register Vx from opcode.
+    pub reg_x: u8,
+    /// Byte from opcode.
+    pub byte: u8,
 }
 
 impl OpCode {
@@ -32,9 +36,17 @@ impl OpCode {
     /// - New `OpCode` object.
     pub fn new(raw: u16) -> Self {
         let addr = raw & 0x0FFF;
-        let class = ((raw >> 12) & 0x0F) as u8;
+        let class = ((raw & 0xF000) >> 12) as u8;
+        let reg_x = ((raw & 0x0F00) >> 8) as u8;
+        let byte = (raw & 0x00FF) as u8;
 
-        Self { raw, addr, class }
+        Self {
+            raw,
+            addr,
+            class,
+            reg_x,
+            byte,
+        }
     }
 
     /// Handle unknown opcode.
@@ -60,11 +72,11 @@ impl OpCode {
         }
     }
 
-    /// Get xnnn opcode class mnemonic.
+    /// Get nnn opcode class mnemonic.
     ///
     /// # Returns
     /// - Opcode assembly mnemonic string representation.
-    fn decode_xnnn(&self) -> String {
+    fn decode_nnn(&self) -> String {
         let addr = self.addr;
 
         match self.class {
@@ -72,6 +84,24 @@ impl OpCode {
             0x2 => format!("CALL {addr:03X}"),
             0xA => format!("LD I, {addr:03X}"),
             0xB => format!("JP V0, {addr:03X}"),
+            _ => self.unknown(),
+        }
+    }
+
+    /// Get xkk opcode class mnemonic.
+    ///
+    /// # Returns
+    /// - Opcode assembly mnemonic string representation.
+    fn decode_xkk(&self) -> String {
+        let reg_x = self.reg_x;
+        let byte = self.byte;
+
+        match self.class {
+            0x3 => format!("SE V{reg_x}, {byte:02X}"),
+            0x4 => format!("SNE V{reg_x}, {byte:02X}"),
+            0x6 => format!("LD V{reg_x}, {byte:02X}"),
+            0x7 => format!("ADD V{reg_x}, {byte:02X}"),
+            0xC => format!("RND V{reg_x}, {byte:02X}"),
             _ => self.unknown(),
         }
     }
@@ -85,10 +115,21 @@ impl Decodable for OpCode {
     fn decode(&self) -> String {
         match self.class {
             0x0 => self.decode_0xxx(),
-            0x1 => self.decode_xnnn(),
-            0x2 => self.decode_xnnn(),
-            0xA => self.decode_xnnn(),
-            0xB => self.decode_xnnn(),
+            0x1 => self.decode_nnn(),
+            0x2 => self.decode_nnn(),
+            0x3 => self.decode_xkk(),
+            0x4 => self.decode_xkk(),
+            0x5 => unimplemented!(),
+            0x6 => self.decode_xkk(),
+            0x7 => self.decode_xkk(),
+            0x8 => unimplemented!(),
+            0x9 => unimplemented!(),
+            0xA => self.decode_nnn(),
+            0xB => self.decode_nnn(),
+            0xC => self.decode_xkk(),
+            0xD => unimplemented!(),
+            0xE => unimplemented!(),
+            0xF => unimplemented!(),
             _ => self.unknown(),
         }
     }
@@ -99,7 +140,7 @@ pub mod tests {
     use super::*;
 
     #[test]
-    fn test_class_method() {
+    fn test_class_extraction() {
         let class = OpCode::new(0x0123).class;
         assert_eq!(0x0, class);
 
@@ -111,7 +152,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_addr_method() {
+    fn test_addr_extraction() {
         let addr = OpCode::new(0x0123).addr;
         assert_eq!(0x123, addr);
 
@@ -123,9 +164,27 @@ pub mod tests {
     }
 
     #[test]
-    fn test_unknown_opcode() {
-        let disasm_str = OpCode::new(0xFFFF).decode();
-        assert_eq!("UNKNOWN: FFFF", disasm_str)
+    fn test_reg_x_extraction() {
+        let reg_x = OpCode::new(0x0123).reg_x;
+        assert_eq!(0x1, reg_x);
+
+        let reg_x = OpCode::new(0x0000).reg_x;
+        assert_eq!(0x0, reg_x);
+
+        let reg_x = OpCode::new(0xDEAD).reg_x;
+        assert_eq!(0xE, reg_x);
+    }
+
+    #[test]
+    fn test_byte_extraction() {
+        let byte = OpCode::new(0x0123).byte;
+        assert_eq!(0x23, byte);
+
+        let byte = OpCode::new(0x0000).byte;
+        assert_eq!(0x00, byte);
+
+        let byte = OpCode::new(0xDEAD).byte;
+        assert_eq!(0xAD, byte);
     }
 
     #[test]
@@ -141,7 +200,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_decode_xnnn() {
+    fn test_decode_nnn() {
         let disasm_str = OpCode::new(0x1123).decode();
         assert_eq!("JP 123", disasm_str);
 
@@ -153,5 +212,23 @@ pub mod tests {
 
         let disasm_str = OpCode::new(0xB123).decode();
         assert_eq!("JP V0, 123", disasm_str);
+    }
+
+    #[test]
+    fn test_decode_xkk() {
+        let disasm_str = OpCode::new(0x3123).decode();
+        assert_eq!("SE V1, 23", disasm_str);
+
+        let disasm_str = OpCode::new(0x4223).decode();
+        assert_eq!("SNE V2, 23", disasm_str);
+
+        let disasm_str = OpCode::new(0x6323).decode();
+        assert_eq!("LD V3, 23", disasm_str);
+
+        let disasm_str = OpCode::new(0x7423).decode();
+        assert_eq!("ADD V4, 23", disasm_str);
+
+        let disasm_str = OpCode::new(0xC523).decode();
+        assert_eq!("RND V5, 23", disasm_str);
     }
 }
