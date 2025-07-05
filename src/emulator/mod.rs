@@ -4,6 +4,7 @@
 //! Emulator main module.
 
 mod disasm;
+mod opcode;
 
 /// Emulator operation mode.
 #[derive(Debug)]
@@ -14,5 +15,8 @@ pub enum Mode {
 
 /// Run an emulator.
 pub fn run(mode: Mode, filename: String) {
-    println!("Mode: {mode:#?}, Filename: {filename}");
+    match mode {
+        Mode::Emulator => unimplemented!(),
+        Mode::Disassembler => disasm::disassemble(&filename),
+    }
 }
