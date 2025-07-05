@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Date: 2025-07-04
-// Author: Alexander Kuzin <alkuzindev@gmail.com>
+// Copyright (C) 2025-present chip8 emulator project and contributors
 
 //! Emulator main module.
+
+mod disasm;
 
 use crate::config::Config;
 
