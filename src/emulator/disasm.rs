@@ -162,6 +162,27 @@ impl OpCode {
             _ => self.unknown(),
         }
     }
+
+    /// Get Fx opcode class mnemonic.
+    ///
+    /// # Returns
+    /// - Opcode assembly mnemonic string representation.
+    fn decode_fx(&self) -> String {
+        let reg_x = self.reg_x;
+
+        match self.byte {
+            0x07 => format!("LD V{reg_x}, DT"),
+            0x0A => format!("LD V{reg_x}, K"),
+            0x15 => format!("LD DT, V{reg_x}"),
+            0x18 => format!("LD ST, V{reg_x}"),
+            0x1E => format!("ADD I, V{reg_x}"),
+            0x29 => format!("LD F, V{reg_x}"),
+            0x33 => format!("LD B, V{reg_x}"),
+            0x55 => format!("LD [I], V{reg_x}"),
+            0x65 => format!("LD V{reg_x}, [I]"),
+            _ => self.unknown(),
+        }
+    }
 }
 
 impl Decodable for OpCode {
@@ -186,7 +207,7 @@ impl Decodable for OpCode {
             0xC => self.decode_xkk(),
             0xD => self.decode_xy(),
             0xE => self.decode_ex(),
-            0xF => unimplemented!(),
+            0xF => self.decode_fx(),
             _ => self.unknown(),
         }
     }
@@ -374,5 +395,38 @@ pub mod tests {
 
         let disasm_str = OpCode::new(0xE1AA).decode();
         assert_eq!("UNKNOWN: E1AA", disasm_str);
+    }
+
+    #[test]
+    fn test_decode_fx() {
+        let disasm_str = OpCode::new(0xF607).decode();
+        assert_eq!("LD V6, DT", disasm_str);
+
+        let disasm_str = OpCode::new(0xF60A).decode();
+        assert_eq!("LD V6, K", disasm_str);
+
+        let disasm_str = OpCode::new(0xF615).decode();
+        assert_eq!("LD DT, V6", disasm_str);
+
+        let disasm_str = OpCode::new(0xF618).decode();
+        assert_eq!("LD ST, V6", disasm_str);
+
+        let disasm_str = OpCode::new(0xF61E).decode();
+        assert_eq!("ADD I, V6", disasm_str);
+
+        let disasm_str = OpCode::new(0xF629).decode();
+        assert_eq!("LD F, V6", disasm_str);
+
+        let disasm_str = OpCode::new(0xF633).decode();
+        assert_eq!("LD B, V6", disasm_str);
+
+        let disasm_str = OpCode::new(0xF655).decode();
+        assert_eq!("LD [I], V6", disasm_str);
+
+        let disasm_str = OpCode::new(0xF665).decode();
+        assert_eq!("LD V6, [I]", disasm_str);
+
+        let disasm_str = OpCode::new(0xF6FF).decode();
+        assert_eq!("UNKNOWN: F6FF", disasm_str);
     }
 }
