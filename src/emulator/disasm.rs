@@ -22,8 +22,12 @@ pub struct OpCode {
     pub addr: u16,
     /// First register Vx from opcode.
     pub reg_x: u8,
+    /// Second register Vy from opcode.
+    pub reg_y: u8,
     /// Byte from opcode.
     pub byte: u8,
+    /// Nibble from opcode.
+    pub nibble: u8,
 }
 
 impl OpCode {
@@ -38,14 +42,18 @@ impl OpCode {
         let addr = raw & 0x0FFF;
         let class = ((raw & 0xF000) >> 12) as u8;
         let reg_x = ((raw & 0x0F00) >> 8) as u8;
+        let reg_y = ((raw & 0x00F0) >> 4) as u8;
         let byte = (raw & 0x00FF) as u8;
+        let nibble = (raw & 0x000F) as u8;
 
         Self {
             raw,
             addr,
             class,
             reg_x,
+            reg_y,
             byte,
+            nibble,
         }
     }
 
@@ -105,6 +113,41 @@ impl OpCode {
             _ => self.unknown(),
         }
     }
+
+    /// Get xy opcode class mnemonic.
+    ///
+    /// # Returns
+    /// - Opcode assembly mnemonic string representation.
+    fn decode_xy(&self) -> String {
+        let reg_x = self.reg_x;
+        let reg_y = self.reg_y;
+        let nibble = self.nibble;
+
+        match self.class {
+            0x5 => match nibble {
+                0x0 => format!("SE V{reg_x}, V{reg_y}"),
+                _ => self.unknown(),
+            },
+            0x8 => match nibble {
+                0x0 => format!("LD V{reg_x}, V{reg_y}"),
+                0x1 => format!("OR V{reg_x}, V{reg_y}"),
+                0x2 => format!("AND V{reg_x}, V{reg_y}"),
+                0x3 => format!("XOR V{reg_x}, V{reg_y}"),
+                0x4 => format!("ADD V{reg_x}, V{reg_y}"),
+                0x5 => format!("SUB V{reg_x}, V{reg_y}"),
+                0x6 => format!("SHR V{reg_x} {{, V{reg_y}}}"),
+                0x7 => format!("SUBN V{reg_x}, V{reg_y}"),
+                0xE => format!("SHL V{reg_x} {{, V{reg_y}}}"),
+                _ => self.unknown(),
+            },
+            0x9 => match nibble {
+                0x0 => format!("SNE V{reg_x}, V{reg_y}"),
+                _ => self.unknown(),
+            },
+            0xD => format!("DRW V{reg_x}, V{reg_y}, {nibble:02X}"),
+            _ => self.unknown(),
+        }
+    }
 }
 
 impl Decodable for OpCode {
@@ -119,15 +162,15 @@ impl Decodable for OpCode {
             0x2 => self.decode_nnn(),
             0x3 => self.decode_xkk(),
             0x4 => self.decode_xkk(),
-            0x5 => unimplemented!(),
+            0x5 => self.decode_xy(),
             0x6 => self.decode_xkk(),
             0x7 => self.decode_xkk(),
-            0x8 => unimplemented!(),
-            0x9 => unimplemented!(),
+            0x8 => self.decode_xy(),
+            0x9 => self.decode_xy(),
             0xA => self.decode_nnn(),
             0xB => self.decode_nnn(),
             0xC => self.decode_xkk(),
-            0xD => unimplemented!(),
+            0xD => self.decode_xy(),
             0xE => unimplemented!(),
             0xF => unimplemented!(),
             _ => self.unknown(),
@@ -176,6 +219,18 @@ pub mod tests {
     }
 
     #[test]
+    fn test_reg_y_extraction() {
+        let reg_y = OpCode::new(0x0123).reg_y;
+        assert_eq!(0x2, reg_y);
+
+        let reg_y = OpCode::new(0x0000).reg_y;
+        assert_eq!(0x0, reg_y);
+
+        let reg_y = OpCode::new(0xDEAD).reg_y;
+        assert_eq!(0xA, reg_y);
+    }
+
+    #[test]
     fn test_byte_extraction() {
         let byte = OpCode::new(0x0123).byte;
         assert_eq!(0x23, byte);
@@ -185,6 +240,18 @@ pub mod tests {
 
         let byte = OpCode::new(0xDEAD).byte;
         assert_eq!(0xAD, byte);
+    }
+
+    #[test]
+    fn test_nibble_extraction() {
+        let nibble = OpCode::new(0x0123).nibble;
+        assert_eq!(0x3, nibble);
+
+        let nibble = OpCode::new(0x6456).nibble;
+        assert_eq!(0x6, nibble);
+
+        let nibble = OpCode::new(0xF789).nibble;
+        assert_eq!(0x9, nibble);
     }
 
     #[test]
@@ -230,5 +297,56 @@ pub mod tests {
 
         let disasm_str = OpCode::new(0xC523).decode();
         assert_eq!("RND V5, 23", disasm_str);
+    }
+
+    #[test]
+    fn test_decode_xy_correct() {
+        let disasm_str = OpCode::new(0x5120).decode();
+        assert_eq!("SE V1, V2", disasm_str);
+
+        let disasm_str = OpCode::new(0x8120).decode();
+        assert_eq!("LD V1, V2", disasm_str);
+
+        let disasm_str = OpCode::new(0x8121).decode();
+        assert_eq!("OR V1, V2", disasm_str);
+
+        let disasm_str = OpCode::new(0x8122).decode();
+        assert_eq!("AND V1, V2", disasm_str);
+
+        let disasm_str = OpCode::new(0x8123).decode();
+        assert_eq!("XOR V1, V2", disasm_str);
+
+        let disasm_str = OpCode::new(0x8124).decode();
+        assert_eq!("ADD V1, V2", disasm_str);
+
+        let disasm_str = OpCode::new(0x8125).decode();
+        assert_eq!("SUB V1, V2", disasm_str);
+
+        let disasm_str = OpCode::new(0x8126).decode();
+        assert_eq!("SHR V1 {, V2}", disasm_str);
+
+        let disasm_str = OpCode::new(0x8127).decode();
+        assert_eq!("SUBN V1, V2", disasm_str);
+
+        let disasm_str = OpCode::new(0x812E).decode();
+        assert_eq!("SHL V1 {, V2}", disasm_str);
+
+        let disasm_str = OpCode::new(0x9120).decode();
+        assert_eq!("SNE V1, V2", disasm_str);
+
+        let disasm_str = OpCode::new(0xD123).decode();
+        assert_eq!("DRW V1, V2, 03", disasm_str);
+    }
+
+    #[test]
+    fn test_decode_xy_incorrect() {
+        let disasm_str = OpCode::new(0x5121).decode();
+        assert_eq!("UNKNOWN: 5121", disasm_str);
+
+        let disasm_str = OpCode::new(0x8128).decode();
+        assert_eq!("UNKNOWN: 8128", disasm_str);
+
+        let disasm_str = OpCode::new(0x9121).decode();
+        assert_eq!("UNKNOWN: 9121", disasm_str);
     }
 }
