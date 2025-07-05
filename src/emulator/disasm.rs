@@ -15,7 +15,11 @@ pub trait Decodable {
 /// CHIP-8 opcode struct.
 pub struct OpCode {
     /// Opcode raw bytes.
-    raw: u16,
+    pub raw: u16,
+    /// Memory address from opcode.
+    pub addr: u16,
+    /// Opcode class.
+    pub class: u8,
 }
 
 impl OpCode {
@@ -27,25 +31,10 @@ impl OpCode {
     /// # Returns
     /// - New `OpCode` object.
     pub fn new(raw: u16) -> Self {
-        Self { raw }
-    }
+        let addr = raw & 0x0FFF;
+        let class = ((raw >> 12) & 0x0F) as u8;
 
-    /// Extract opcode class.
-    ///
-    /// # Returns
-    /// - Opcode class.
-    #[inline(always)]
-    pub fn class(&self) -> u16 {
-        self.raw & 0xF000
-    }
-
-    /// Extract memory address from opcode.
-    ///
-    /// # Returns
-    /// - Memory address from opcode.
-    #[inline(always)]
-    pub fn addr(&self) -> u16 {
-        self.raw & 0x0FFF
+        Self { raw, addr, class }
     }
 
     /// Handle unknown opcode.
@@ -62,7 +51,7 @@ impl OpCode {
     /// # Returns
     /// - Opcode assembly mnemonic string representation.
     fn decode_0xxx(&self) -> String {
-        let addr = self.addr();
+        let addr = self.addr;
 
         match self.raw {
             0x00E0 => "CLS".to_string(),
@@ -75,10 +64,10 @@ impl OpCode {
     ///
     /// # Returns
     /// - Opcode assembly mnemonic string representation.
-    fn decode_xnnn(&self, class: u8) -> String {
-        let addr = self.addr();
+    fn decode_xnnn(&self) -> String {
+        let addr = self.addr;
 
-        match class {
+        match self.class {
             0x1 => format!("JP {addr:03X}"),
             0x2 => format!("CALL {addr:03X}"),
             0xA => format!("LD I, {addr:03X}"),
@@ -94,14 +83,12 @@ impl Decodable for OpCode {
     /// # Returns
     /// - Opcode assembly mnemonic string representation.
     fn decode(&self) -> String {
-        let opcode_class = self.class();
-
-        match opcode_class {
-            0x0000 => self.decode_0xxx(),
-            0x1000 => self.decode_xnnn(0x1),
-            0x2000 => self.decode_xnnn(0x2),
-            0xA000 => self.decode_xnnn(0xA),
-            0xB000 => self.decode_xnnn(0xB),
+        match self.class {
+            0x0 => self.decode_0xxx(),
+            0x1 => self.decode_xnnn(),
+            0x2 => self.decode_xnnn(),
+            0xA => self.decode_xnnn(),
+            0xB => self.decode_xnnn(),
             _ => self.unknown(),
         }
     }
@@ -113,25 +100,25 @@ pub mod tests {
 
     #[test]
     fn test_class_method() {
-        let class = OpCode::new(0x0123).class();
-        assert_eq!(0x0000, class);
+        let class = OpCode::new(0x0123).class;
+        assert_eq!(0x0, class);
 
-        let class = OpCode::new(0x6123).class();
-        assert_eq!(0x6000, class);
+        let class = OpCode::new(0x6123).class;
+        assert_eq!(0x6, class);
 
-        let class = OpCode::new(0xF123).class();
-        assert_eq!(0xF000, class);
+        let class = OpCode::new(0xF123).class;
+        assert_eq!(0xF, class);
     }
 
     #[test]
     fn test_addr_method() {
-        let addr = OpCode::new(0x0123).addr();
+        let addr = OpCode::new(0x0123).addr;
         assert_eq!(0x123, addr);
 
-        let addr = OpCode::new(0x0000).addr();
+        let addr = OpCode::new(0x0000).addr;
         assert_eq!(0x000, addr);
 
-        let addr = OpCode::new(0xDEAD).addr();
+        let addr = OpCode::new(0xDEAD).addr;
         assert_eq!(0xEAD, addr);
     }
 
