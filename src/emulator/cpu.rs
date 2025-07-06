@@ -6,8 +6,8 @@
 /// CHIP-8 RAM size (4 KB).
 const RAM_SIZE: usize = 4096;
 
-/// Start memory address of most CHIP-8 programs.
-const PROGRAM_START_ADDR: usize = 0x200;
+/// Program start memory address of most CHIP-8 programs.
+pub const START_ADDR: usize = 0x200;
 
 /// Emulated CPU main struct.
 pub struct Cpu {
@@ -32,7 +32,8 @@ impl Cpu {
     /// - `program_data` - given program data bytes.
     pub fn load_program(&mut self, program_data: &[u8]) {
         let program_size = program_data.len();
-        let memory_slice = &mut self.memory[0x200..0x200 + program_size];
+        let load_range = START_ADDR..START_ADDR + program_size;
+        let memory_slice = &mut self.memory[load_range];
 
         memory_slice.copy_from_slice(program_data);
     }

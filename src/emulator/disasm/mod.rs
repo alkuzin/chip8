@@ -3,7 +3,7 @@
 
 //! Emulator builtin disassembler main module.
 
-use crate::emulator::{EmulatorResult, opcode::OpCode};
+use crate::emulator::{EmulatorResult, cpu::START_ADDR, opcode::OpCode};
 
 /// Opcode decodable trait.
 pub trait Decodable {
@@ -32,10 +32,9 @@ pub fn disassemble(program_data: &[u8]) -> EmulatorResult<()> {
 
     for (i, bytes) in buffer.iter().enumerate() {
         let opcode = OpCode::new(*bytes).decode();
-        // TODO: make 0x200 and other magic numbers as global const.
-        let addr = 0x200 + i * 2;
+        let addr = START_ADDR + i * 2;
 
-        println!("<{addr:#06X}>  |{bytes:04X}|  {opcode}");
+        println!("<{addr:#05X}>  |{bytes:04X}|  {opcode}");
     }
 
     Ok(())
