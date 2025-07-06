@@ -22,8 +22,15 @@ pub trait Decodable {
 /// # Returns
 /// - `Ok`  - in case of success.
 /// - `Err` - otherwise.
-pub fn disassemble(program_data: &[u16]) -> EmulatorResult<()> {
-    for (i, bytes) in program_data.iter().enumerate() {
+pub fn disassemble(program_data: &[u8]) -> EmulatorResult<()> {
+    // Convert file bytes to vector of u16 big endian bytes.
+    let mut buffer: Vec<u16> = Vec::with_capacity(program_data.len() / 2);
+
+    for chunk in program_data.chunks_exact(2) {
+        buffer.push(u16::from_be_bytes([chunk[0], chunk[1]]));
+    }
+
+    for (i, bytes) in buffer.iter().enumerate() {
         let opcode = OpCode::new(*bytes).decode();
         // TODO: make 0x200 and other magic numbers as global const.
         let addr = 0x200 + i * 2;
