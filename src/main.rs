@@ -10,7 +10,16 @@ mod args;
 mod config;
 mod emulator;
 
+use crate::{config::Config, emulator::Emulator};
+
 fn main() {
     let (mode, filename) = args::handle_args();
-    emulator::run(mode, filename);
+    let mut emulator = Emulator::new();
+
+    if let Err(error) = emulator.run(mode, filename) {
+        // TODO: add custom error macro.
+        let name = Config::name();
+
+        println!("{name}: {error}");
+    }
 }
