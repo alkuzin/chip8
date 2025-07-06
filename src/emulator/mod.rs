@@ -3,6 +3,7 @@
 
 //! Emulator main module.
 
+use crate::emulator::cpu::Cpu;
 use std::{fs::File, io::Read};
 
 mod cpu;
@@ -20,7 +21,10 @@ pub enum Mode {
 pub type EmulatorResult<T> = Result<T, String>;
 
 /// Emulator main struct.
-pub struct Emulator;
+pub struct Emulator {
+    /// Emulated CPU.
+    cpu: Cpu,
+}
 
 impl Emulator {
     /// Construct new `Emulator` object.
@@ -28,7 +32,9 @@ impl Emulator {
     /// # Returns
     /// - New `Emulator` object.
     pub fn new() -> Self {
-        Self {}
+        let cpu = Cpu::new();
+
+        Self { cpu }
     }
 
     /// Extract program data from binary file.
@@ -39,30 +45,21 @@ impl Emulator {
     /// # Returns
     /// - Program data bytes - in case of success.
     /// - `Err`              - otherwise.
-    fn extract_program(&self, filename: &String) -> EmulatorResult<Vec<u16>> {
+    fn extract_program(&self, filename: &String) -> EmulatorResult<Vec<u8>> {
         match File::open(filename) {
             Ok(mut file) => {
-                let mut temp_buffer = Vec::new();
+                let mut buffer = Vec::new();
 
-                if let Err(error) = file.read_to_end(&mut temp_buffer) {
+                if let Err(error) = file.read_to_end(&mut buffer) {
                     return Err(format!(
                         "Error read '{filename}' to buffer: {error}"
                     ));
                 }
 
-                let bytes_len = temp_buffer.len();
-
-                if bytes_len % 2 != 0 {
+                if buffer.len() % 2 != 0 {
                     return Err(
                         "Buffer should have even byte length".to_string()
                     );
-                }
-
-                // Convert file bytes to vector of u16 big endian bytes.
-                let mut buffer: Vec<u16> = Vec::with_capacity(bytes_len / 2);
-
-                for chunk in temp_buffer.chunks_exact(2) {
-                    buffer.push(u16::from_be_bytes([chunk[0], chunk[1]]));
                 }
 
                 Ok(buffer)
@@ -86,8 +83,23 @@ impl Emulator {
         let program_data = self.extract_program(&filename)?;
 
         match mode {
-            Mode::Emulator => unimplemented!(),
+            Mode::Emulator => self.emulate(&program_data),
             Mode::Disassembler => disasm::disassemble(&program_data),
         }
+    }
+
+    /// Emulate platform.
+    ///
+    /// # Parameters
+    /// - `program_data` - given program data bytes.
+    ///
+    /// # Returns
+    /// - `Ok`  - in case of success.
+    /// - `Err` - otherwise.
+    fn emulate(&mut self, program_data: &[u8]) -> EmulatorResult<()> {
+        self.cpu.load_program(program_data);
+        self.cpu.run();
+
+        Ok(())
     }
 }
