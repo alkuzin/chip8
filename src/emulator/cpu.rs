@@ -118,7 +118,7 @@ impl Cpu {
             0xB => self.execute_0nnn(),
             0xC => self.execute_xkk(),
             0xD => unimplemented!(),
-            0xE => unimplemented!(),
+            0xE => self.execute_ex(),
             0xF => unimplemented!(),
             _ => self.unknown(),
         }
@@ -296,5 +296,34 @@ impl Cpu {
         let mut generator = rand::rng();
         let random_byte = generator.random_range(0..255);
         self.registers[reg as usize] = random_byte & byte;
+    }
+
+    /// Execute Ex opcode class instructions.
+    fn execute_ex(&mut self) {
+        let reg_x = self.opcode.reg_x;
+
+        match self.opcode.byte {
+            0x9E => self.skip_if_key_pressed(reg_x),
+            0xA1 => self.skip_if_key_not_pressed(reg_x),
+            _ => self.unknown(),
+        }
+    }
+
+    /// Skip next instruction if key with the value of `reg` is pressed.
+    ///
+    /// # Parameters
+    /// - `reg` - given register.
+    #[inline(always)]
+    fn skip_if_key_pressed(&mut self, _reg: u8) {
+        unimplemented!()
+    }
+
+    /// Skip next instruction if key with the value of `reg` is not pressed.
+    ///
+    /// # Parameters
+    /// - `reg` - given register.
+    #[inline(always)]
+    fn skip_if_key_not_pressed(&mut self, _reg: u8) {
+        unimplemented!()
     }
 }
