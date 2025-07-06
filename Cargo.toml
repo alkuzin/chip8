@@ -13,3 +13,4 @@ edition     = "2024"
 
 # Project dependencies section.
 [dependencies]
+rand = "0.9.1"

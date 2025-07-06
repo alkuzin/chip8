@@ -3,8 +3,8 @@
 
 //! Emulated CPU related declarations.
 
-use crate::emulator::disasm::Decodable;
-use crate::emulator::opcode::OpCode;
+use crate::emulator::{disasm::Decodable, opcode::OpCode};
+use rand::Rng;
 
 /// CHIP-8 RAM size (4 KB).
 const RAM_SIZE: usize = 4096;
@@ -52,7 +52,17 @@ impl Cpu {
         let pc = START_ADDR as u16;
         let opcode = OpCode::new(0);
 
-        Self { memory, registers, register_i: 0, pc, sp: 0, stack, dt: 0, st: 0, opcode }
+        Self {
+            memory,
+            registers,
+            register_i: 0,
+            pc,
+            sp: 0,
+            stack,
+            dt: 0,
+            st: 0,
+            opcode,
+        }
     }
 
     /// Load program to RAM.
@@ -97,16 +107,16 @@ impl Cpu {
             0x0 => self.execute_0xxx(),
             0x1 => self.execute_0nnn(),
             0x2 => self.execute_0nnn(),
-            0x3 => unimplemented!(),
-            0x4 => unimplemented!(),
+            0x3 => self.execute_xkk(),
+            0x4 => self.execute_xkk(),
             0x5 => unimplemented!(),
-            0x6 => unimplemented!(),
-            0x7 => unimplemented!(),
+            0x6 => self.execute_xkk(),
+            0x7 => self.execute_xkk(),
             0x8 => unimplemented!(),
             0x9 => unimplemented!(),
             0xA => self.execute_0nnn(),
             0xB => self.execute_0nnn(),
-            0xC => unimplemented!(),
+            0xC => self.execute_xkk(),
             0xD => unimplemented!(),
             0xE => unimplemented!(),
             0xF => unimplemented!(),
@@ -214,5 +224,77 @@ impl Cpu {
     #[inline(always)]
     fn jump_by_offset(&mut self, addr: u16) {
         self.pc = self.registers[0] as u16 + addr;
+    }
+
+    /// Execute xkk opcode class instructions.
+    #[inline(always)]
+    fn execute_xkk(&mut self) {
+        let reg_x = self.opcode.reg_x;
+        let byte = self.opcode.byte;
+
+        match self.opcode.class {
+            0x3 => self.skip_eq(reg_x, byte),
+            0x4 => self.skip_ne(reg_x, byte),
+            0x6 => self.set_reg_byte(reg_x, byte),
+            0x7 => self.add_reg_byte(reg_x, byte),
+            0xC => self.rnd(reg_x, byte),
+            _ => self.unknown(),
+        }
+    }
+
+    /// Skip next instruction if `reg` = `byte`.
+    ///
+    /// # Parameters
+    /// - `reg`  - given register.
+    /// - `byte` - given byte to compare.
+    #[inline(always)]
+    fn skip_eq(&mut self, reg: u8, byte: u8) {
+        if self.registers[reg as usize] == byte {
+            self.pc += 2;
+        }
+    }
+
+    /// Skip next instruction if `reg` != `byte`.
+    ///
+    /// # Parameters
+    /// - `reg`  - given register.
+    /// - `byte` - given byte to compare.
+    #[inline(always)]
+    fn skip_ne(&mut self, reg: u8, byte: u8) {
+        if self.registers[reg as usize] != byte {
+            self.pc += 2;
+        }
+    }
+
+    /// Assign byte to register.
+    ///
+    /// # Parameters
+    /// - `reg`  - given register.
+    /// - `byte` - given byte to compare.
+    #[inline(always)]
+    fn set_reg_byte(&mut self, reg: u8, byte: u8) {
+        self.registers[reg as usize] = byte;
+    }
+
+    /// Add byte to register.
+    ///
+    /// # Parameters
+    /// - `reg`  - given register.
+    /// - `byte` - given byte to compare.
+    #[inline(always)]
+    fn add_reg_byte(&mut self, reg: u8, byte: u8) {
+        self.registers[reg as usize] += byte;
+    }
+
+    /// Assign to register random byte AND `byte`.
+    ///
+    /// # Parameters
+    /// - `reg`  - given register.
+    /// - `byte` - given byte to compare.
+    #[inline(always)]
+    fn rnd(&mut self, reg: u8, byte: u8) {
+        let mut generator = rand::rng();
+        let random_byte = generator.random_range(0..255);
+        self.registers[reg as usize] = random_byte & byte;
     }
 }
